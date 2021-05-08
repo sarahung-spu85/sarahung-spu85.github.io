@@ -43,3 +43,5 @@ cat(c(computational,py$biology))
 ```
 
 And just like that! We have combined R and Python together!
+
+![](/post/2021-05-07-rhython-r-python-are-they-the-new-it-couple-of-2021_files/477AD56E-CF1B-4437-9D53-8AB532E2FAD4.jpeg)
