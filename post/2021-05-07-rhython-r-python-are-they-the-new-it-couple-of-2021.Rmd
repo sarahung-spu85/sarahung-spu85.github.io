@@ -2,7 +2,7 @@
 title: "Rhython (R + Python)? Are they the new IT couple of 2021?!?"
 Author: ''
 Date: '2021-05-07'
-slug: my-post
+slug: rhython-r-python-are-they-the-new-it-couple-of-2021
 categories: []
 tags: []
 description: ''
