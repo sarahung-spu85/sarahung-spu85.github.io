@@ -1,0 +1,209 @@
+---
+title: "Project 1 (spu85) [SDS348]"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Introduction
+
+The two datasets that I have chosen to work with are called "Austin Citations" and "Austin Weather". For "Austin Citations", the variables that were being used were - citation number, offense date, offense time, location, race known, reason for stop - TCOLE form, sex,, race, search y/n, search based on, and search found. For this particular dataset, I was able to access this information from the Data.gov website. However, for "Austin Weather", the variables that were being used for this dataset were founded to be - station, name, date, tavg, tmax, and tmin. And for this dataset, I was able to access this information from the https://www.ncdc.noaa.gov/ website.  The reason as to why I had chosen to work with these 2 datasets is because I had wanted to see if temperature could potentially play a role as to how many citation tickets were being given out to people on a particular day. Additionally, since I am currently living in Austin as well - I thought it might be interesting to use Austin, Texas as the location in order to see if there is a correlation to the amount of tickets being given on a particular day due to temperature. It's because if there is a correlation that has been founded within my project, I could perhaps have an idea as to whether or not I should actually go out driving depending on what the weather is actually like for that particular day. However, with that being said, I do hypothesize that there is a correlation between temperature and the amount of citation tickets being given on a particular day - in that as temperature increases, the amount of citation tickets that are being given out increases as well. 
+
+#### 1. Tidying: Rearranging Wide/Long
+
+```{r}
+knitr::opts_chunk$set(echo = TRUE, eval = TRUE, fig.align = "center", warning = F, message = F,
+                      tidy=TRUE, tidy.opts=list(width.cutoff=60), R.options=list(max.print=100))
+library(readxl)
+austinweather<-read_excel("~/Projects (SDS348)/austinweather.xlsx")
+head(austinweather)
+austinweather$DATE <- format(as.Date(austinweather$DATE, "%B %d %Y"),"%m/%d/%Y")
+library(readxl)
+austincitations<-read_excel("~/Projects (SDS348)/austincitations.xlsx")
+head(austincitations)
+
+library(dplyr)
+library(tidyverse)
+austinweather1<-austinweather%>%pivot_wider(names_from=DATE,values_from=TAVG)
+head(austinweather1)
+austincitations1<-austincitations%>%pivot_wider(names_from=Race,values_from=OffenseDate)
+head(austincitations1)
+
+austinweather2<-austinweather1%>%pivot_longer(contains("/"),names_to="DATE",values_to="TAVG",values_drop_na=TRUE)
+head(austinweather2)
+austincitations2<-austincitations1%>%pivot_longer(cols=c("ME","A","H","W","B","U","O","N"),names_to="Race",values_to="OffenseDate",values_drop_na=TRUE)
+head(austincitations2)
+
+austinweather3<-austinweather%>%pivot_wider(names_from=DATE,values_from=TAVG)%>%pivot_longer(contains("/"),names_to="DATE",values_to="TAVG",values_drop_na=TRUE)
+head(austinweather3)
+austincitations3<-austincitations%>%pivot_wider(names_from=Race,values_from=OffenseDate)%>%pivot_longer(cols=c("ME","A","H","W","B","U","O","N"),names_to="Race",values_to="OffenseDate",values_drop_na=TRUE)
+head(austincitations3)
+```
+For the first chunk of the code, I had installed and converted my excel datasets into R-datasets so that they can be used correctly for R-Studio. Without it, I would have been unable to code for anything within my particular datasets. The second chunk of my code, had made both of the columns within my two datasets wider as a means to properly demonstrate that I had known how to use the "pivot wider"/spread code - in that, I had needed to increase the number of columns while also simultaneously decreasing the number of rows. For Austin Citations, I had made this dataset wider by expanding a person's race as it's own column while including the date they had received the citation as the results for those particular columns. As a result, the columns that were added due to this were: ME, A, H, W, B, U, O, and N. For Austin Weather, I was able to make this dataset wider by expanding the date at which the temperature was taken as its own column while including the temperature average as the results for those particular columns. As a result, the columns that were added due to this had ranged from January 1, 2018 to December 31, 2018. The third chunk of the code, had turned both of my wide datasets - back into the dataset that it was originally presented in. The reason for this is to properly demonstrate that I had actually known how to use the "pivot longer"/gather code - in that, I had needed to increase the number of rows within a column while also simultaneously decreasing the amount of columns in each dataset. For Austin Citations, I had been able to do this by giving race and the offense date their respective columns back. However, for Austin Weather, I had done this by giving the date and the temperature average its own columns back as well. Now, for the fourth chunk of the code, I had just combined both of the pivot wider function and the pivot longer function that I had previously used - into one code. 
+
+#### 2. Joining/Merging
+
+```{r}
+fulljoinproject<-full_join(austinweather,austincitations,by=c("DATE"="OffenseDate"))
+head(fulljoinproject)
+```
+The dplyr join function that I had used for my two datasets had been the full_join function. The reason as to why I had chosen to use the full_join function code is because I did not want to drop any of my rows or columns from either of my datasets. However, in order to combine both datasets together - I had combined them both datasets by combining the date the temperature was taken, to the offense date a citation was given. Because of this, by using the full_join function and combining both datasets through dates, all my values had matched with each other - which meant that I had no NA values within my fully-joined dataset.
+
+#### 3. Wrangling
+
+```{r}
+fulljoinproject1<-fulljoinproject%>%filter(TAVG>40)
+head(fulljoinproject1)
+
+fulljoinproject2<-fulljoinproject%>%select(DATE,TAVG,`Citation Number`)
+head(fulljoinproject2)
+
+fulljoinproject3<-arrange(select(filter(fulljoinproject,TAVG==86,TMIN==75), 'Citation Number',TAVG))
+head(fulljoinproject3)
+
+fulljoinproject4<-fulljoinproject%>%group_by(DATE,TAVG)
+head(fulljoinproject4)
+
+fulljoinproject5<-fulljoinproject%>%mutate(T_Range=TMAX-TMIN)
+head(fulljoinproject5)
+
+fulljoinproject6<-fulljoinproject%>%group_by(Location)%>%summarize(mean_TAVG=mean(TAVG,na.rm=T),sd_TAVG=sd(TAVG,na.rm=T))
+head(fulljoinproject6)
+
+fulljoinproject_meanoverall<-fulljoinproject%>%summarize_at(c("TAVG","TMIN","TMAX"),mean,na.rm=T)
+head(fulljoinproject_meanoverall)
+fulljoinproject_mean1<-fulljoinproject%>%group_by(Location)%>%summarize(mean(TAVG))%>%na.omit()
+head(fulljoinproject_mean1)
+fulljoinproject_mean2<-fulljoinproject%>%group_by(Location)%>%summarize(mean(TMIN))%>%na.omit()
+head(fulljoinproject_mean2)
+fulljoinproject_mean3<-fulljoinproject%>%group_by(Location)%>%summarize(mean(TMAX))%>%na.omit()
+head(fulljoinproject_mean3)
+
+fulljoinproject_sdoverall<-fulljoinproject%>%summarize_at(c("TAVG","TMIN","TMAX"),sd,na.rm=T)
+head(fulljoinproject_sdoverall)
+fulljoinproject_sd1<-fulljoinproject%>%group_by(Location)%>%summarize(sd(TAVG))%>%na.omit()
+head(fulljoinproject_sd1)
+fulljoinproject_sd2<-fulljoinproject%>%group_by(Location)%>%summarize(sd(TMIN))%>%na.omit()
+head(fulljoinproject_sd2)
+fulljoinproject_sd3<-fulljoinproject%>%group_by(Location)%>%summarize(sd(TMAX))%>%na.omit()
+head(fulljoinproject_sd3)
+
+fulljoinproject_minoverall<-fulljoinproject%>%summarize(min_TAVG = min(TAVG),min_TMIN=min(TMIN),min_TMAX=min(TMAX))
+head(fulljoinproject_minoverall)
+fulljoinproject_min<-fulljoinproject%>%group_by(Location,`Reason for Stop – TCOLE form`)%>%summarize_if(is.numeric,list(min=min),na.rm=T)
+head(fulljoinproject_min)
+
+fulljoinproject_maxoverall<-fulljoinproject%>%summarize(max_TAVG = max(TAVG),max_TMIN=max(TMIN),max_TMAX=max(TMAX))
+head(fulljoinproject_maxoverall)
+fulljoinproject_max<-fulljoinproject%>%group_by(Location,`Reason for Stop – TCOLE form`)%>%summarize_if(is.numeric,list(max=max),na.rm=T)
+head(fulljoinproject_max)
+
+fulljoinproject_ndistinctoverall<-fulljoinproject%>%summarize_all(n_distinct)
+head(fulljoinproject_ndistinctoverall)
+fulljoinproject_ndistinct1<-fulljoinproject%>%group_by(Location)%>%summarize(n_distinct(STATION))
+head(fulljoinproject_ndistinct1)
+fulljoinproject_ndistinct2<-fulljoinproject%>%group_by(Location)%>%summarize(n_distinct(NAME))
+head(fulljoinproject_ndistinct2)
+fulljoinproject_ndistinct3<-fulljoinproject%>%group_by(Location)%>%summarize(n_distinct(DATE))
+head(fulljoinproject_ndistinct3)
+fulljoinproject_ndistinct4<-fulljoinproject%>%group_by(Location)%>%summarize(n_distinct(TAVG))
+head(fulljoinproject_ndistinct4)  
+fulljoinproject_ndistinct5<-fulljoinproject%>%group_by(Location)%>%summarize(n_distinct(TMAX))
+head(fulljoinproject_ndistinct5)
+fulljoinproject_ndistinct6<-fulljoinproject%>%group_by(Location)%>%summarize(n_distinct(TMIN))
+head(fulljoinproject_ndistinct6)
+fulljoinproject_ndistinct7<-fulljoinproject%>%group_by(Location)%>%summarize(n_distinct(`Citation Number`))
+head(fulljoinproject_ndistinct7)
+fulljoinproject_ndistinct8<-fulljoinproject%>%group_by(Location)%>%summarize(n_distinct(OffenseTime))
+head(fulljoinproject_ndistinct8)
+fulljoinproject_ndistinct9<-fulljoinproject%>%group_by(Location)%>%summarize(n_distinct(Location))
+head(fulljoinproject_ndistinct9)
+fulljoinproject_ndistinct10<-fulljoinproject%>%group_by(Location)%>%summarize(n_distinct(Race_Known))
+head(fulljoinproject_ndistinct10)
+fulljoinproject_ndistinct11<-fulljoinproject%>%group_by(Location)%>%summarize(n_distinct(`Reason for Stop – TCOLE form`))
+head(fulljoinproject_ndistinct11)
+fulljoinproject_ndistinct12<-fulljoinproject%>%group_by(Location)%>%summarize(n_distinct(Sex))
+head(fulljoinproject_ndistinct12)
+fulljoinproject_ndistinct13<-fulljoinproject%>%group_by(Location)%>%summarize(n_distinct(Race))
+head(fulljoinproject_ndistinct13)
+fulljoinproject_ndistinct14<-fulljoinproject%>%group_by(Location)%>%summarize(n_distinct(`Search YN`))
+head(fulljoinproject_ndistinct14)
+fulljoinproject_ndistinct15<-fulljoinproject%>%group_by(Location)%>%summarize(n_distinct(`Search Based On`))
+head(fulljoinproject_ndistinct15)
+fulljoinproject_ndistinct16<-fulljoinproject%>%group_by(Location)%>%summarize(n_distinct(`Search Found`))
+head(fulljoinproject_ndistinct16)
+```
+The first core dplyr function that I had used was the filter function. In doing so, for this particular dataset - I had filtered out all temperature averages that were below 40°F. As a result, if any of the average temperatures were founded to be below 40°F, they were not included within this particular dataset. The second core dplyr function that I had used was the select function. In doing so, for this particular dataset - I had selected only to look at the date, the temperature average, and the citation number. As a result, by using the select function, the dataset that I had produced - had only included the date, the temperature average, and the citation number from the whole dataset rather than all of the other variables from the dataset as well. The third core dplyr function that I had used was the arrange function. In doing so, for this particular dataset - at first, I had filtered out my dataset to only observe the results that had an average temperature of 86°F and a minimum temperature of 75°F. Once that was completed, I then selected to look at just the citation number and the temperature average from those results. The fourth core dplyr function that I had used was the group by function. In doing so, it can be observed that the group by function has experienced no changes in comparison to the original dataset. The reason for this is because the group by function needs to be used alongside other dplyr functions - which will be observed later on within this section of the code. The fifth core dplur function that I had used was the mutate function. In doing so, it can be observed that I had created a new variable that is called the temperature range. In which, I had taken the temperature minimum of that day and subtracted it from the temperature maximum of that day - which would then give me the temperature range for that particular day. The sixth core dplyr function that I had used was the summarize function. In doing so, I had grouped the dataset by its location and had used the summarize function in order to determine the average temperature mean and average temperature standard deviation of each location that a citation ticket was given at. 
+Following those core dplyr function codes that I had done, had then created a summary statistic for each of my variables through the use of the group by function. For the first summary statistic - I had summarized them by first looking at where the citation ticket was given at, and then by summarizing the mean temperature average, the mean temperature minimum, and the mean temperature maximum of said locations. For the second summary statistic - I had summarized them by first looking at where the citation ticket was given at, and then by summarizing the standard deviation temperature average, the standard deviation temperature minimum, and the standard deviation maximum of said locations. For the third summary statistic - I had summarized them by first observing the overall minimum temperature average, the overall minimum temperature minimum, and the overall minimum temperature maximum of the whole dataset. Following this, I had then looked at the overall minimum temperature average, the overall minimum temperature minimum, and the overall minimum temperature maximum of each location based upon the reason for the stop of the citation ticket. For the fourth summary statistic - I had summarized them by first observing the overall maximum temperature average, the overall maximum temperature minimum, and the overall maximum temperature maximum of the whole dataset. Following this, I had then looked at the overall maximum temperature average, the overall maximum temperature minimum, and the overall maximum temperature maximum of each location based upon the reason for the stop of the citation ticket. For the fifth summary statistic - I had summarized them by observing the overall amount of distinct names and/or numbers for each column. Following this, I had then looked at the distinct number for each station, name, date, temperature average, temperature maximum, temperature minimum, citation number, offense time, location, race known, reason for stop - TCOLE form, sex, race, search y/n, search based on, and search found of each location based upon the reason for the stop of the citation ticket. 
+
+#### 4. Visualizing
+
+```{r}
+fulljoinproject%>%select_if(is.numeric)%>%cor%>% as.data.frame%>%rownames_to_column%>%pivot_longer(-1)%>%ggplot(aes(rowname,name,fill=value))+geom_tile()+ geom_text(aes(label=round(value,2)))+xlab("Variable 1")+ylab("Variable 2")+coord_fixed()+scale_fill_gradient2(low="red",mid="yellow",high="blue")+ggtitle(label="Heatmap of Variable 2 vs Variable 1")
+fulljoinproject_MDY<-fulljoinproject%>%separate(DATE,into=c("month","day","year"))
+ggplot(fulljoinproject_MDY,aes(x=TMIN,y=TMAX,colour=TAVG))+geom_point()+theme_light()+xlab("Minimum Temperature (°F)")+ylab("Maximum Temperature (°F)")+ggtitle("Scatter Plot of Maximum Temperature (°F) vs Minimum Temperature (°F)")+scale_color_continuous("Average Temperature (°F)")+scale_color_gradient(low="blue",high="red")
+ggplot(fulljoinproject_MDY,aes(x=month,y=TMAX))+geom_boxplot()+geom_jitter(alpha=0.15,size=0.3,aes(color=TAVG))+xlab("Month")+ylab("Maximum Temperature (°F)")+ggtitle("Box Plot of Maximum Temperature (°F) vs Month")+scale_color_continuous("Average Temperature (°F)")
+ggplot(fulljoinproject_MDY,aes(day,y=TMIN,fill=TAVG))+geom_bar(stat="summary",fun=mean)+geom_errorbar(stat="summary",fun.data=mean_cl_normal)+facet_wrap(~month)+scale_x_discrete(breaks=seq(1,31,5))+xlab("Day of the Month")+ylab("Minimum Temperature (°F)")+ggtitle("Bar Graph of Minimum Temperature (°F) vs Day of the Month")+scale_color_continuous("Average Temperature (°F)")
+```
+According to the heatmap that I had created for my dataset, it can be observed in that - there is obviously a strong correlation between the average temperature with the average temperature, the maximum temperature with the maximum temperature, and the minimum temperature with the minimum temperature. Additionally, it was also noticeable that there was a strong correlation between the average temperature with the minimum temperature, as well as the average temperature with the maximum temperature - in that, the correlation for the average temperature to both the minimum temperature and the maximum temperature was founded to be at approximately 0.96. In addition to this, it can also be seen in that there is a slightly less stronger correlation between the maximum temperature with the minimum temperature - in that, the correlation founded between the maximum temperature and the minimum temperature was founded to be at about 0.87. In regards to the scatter plot of the maximum temperature vs the minimum temperature, it makes sense that the higher the average temperature is - the more likely it is going to be leaning towards the right for the minimum temperature, and more likely to be higher up for the maximum temperature. In addition to this, the same thing can be said for the average temperatures that are considered to be low - in that, it is more likely going to be leaning towards the left for the minimum temperature, and more likely to be lower down for the maximum temperature. In regards to the box plot of maximum temperature vs month, it makes sense that the maximum temperatures and average temperatures are usually more higher up in the summer and spring months in comparison to the fall and winter months. In addition to this, it also makes sense that the average temperature for a specific month also coincides with the maximum temperature for that month as well - in that: if the maximum temperature is high in value, then the average temperature is also going to be high in value as well. In regards to the bar graph of minimum temperature vs month, it makes sense that the minimum temperatures are usually on the lower side in the fall and winter months in comparison to the spring and summer months. In addition to this, it also makes sense that the average temperature for that month also coincides with the minimum temperature for that month as well - in that: if the minimum temperature is low in value, then the average temperature is also going to be low in value as well. 
+
+#### 5. Dimensionality Reduction
+
+```{r}
+library(tidyverse)
+library(cluster)
+clust_dat_fulljoin<-fulljoinproject%>%dplyr::select(TMIN,TMAX)
+set.seed(348)
+kmeans1_fulljoin<-clust_dat_fulljoin%>%kmeans(3)
+kmeans1_fulljoin
+kmeansclust_fulljoin<-clust_dat_fulljoin%>%mutate(cluster=as.factor(kmeans1_fulljoin$cluster))
+kmeansclust_fulljoin%>%ggplot(aes(TMIN,TMAX,color=cluster))+geom_point()+xlab("Minimum Temperature (°F)") + ylab("Maximum Temperature (°F)") + ggtitle("Scatter Plot of Maximum Temperature (°F) vs Minimum Temperature (°F)")
+library(cluster)
+sil_width_fulljoin<-vector()
+for(i in 2:10){  
+  kms_fulljoin <- kmeans(clust_dat_fulljoin,centers=i) 
+  sil_fulljoin <- silhouette(kms_fulljoin$cluster,dist(clust_dat_fulljoin))
+  sil_width_fulljoin[i]<-mean(sil_fulljoin[,3]) 
+}
+ggplot()+geom_line(aes(x=1:10,y=sil_width_fulljoin))+scale_x_continuous(name="k",breaks=1:10)+ xlab("k") + ylab("sil_width_fulljoin") + ggtitle("sil_width_fulljoin vs k")
+library(cluster)
+pam1_fulljoin<-clust_dat_fulljoin%>%pam(k=3)
+pam1_fulljoin
+pamclust_fulljoin<-clust_dat_fulljoin%>%mutate(cluster=as.factor(pam1_fulljoin$clustering))
+pamclust_fulljoin%>%ggplot(aes(TMIN,TMAX,color=cluster))+geom_point()+xlab("Minimum Temperature (°F)") + ylab("Maximum Temperature (°F)") + ggtitle("Scatter Plot of Maximum Temperature (°F) vs Minimum Temperature (°F)")
+pamclust_fulljoin%>%group_by(cluster)%>%summarize_if(is.numeric,mean,na.rm=T)
+fulljoinproject[pam1_fulljoin$id.med,]
+fulljoinproject%>%slice(pam1_fulljoin$id.med)
+fulljoinproject%>%ggplot(aes(TMIN,TMAX,color=`Reason for Stop – TCOLE form`))+geom_point()+xlab("Minimum Temperature (°F)") + ylab("Maximum Temperature (°F)") + ggtitle("Scatter Plot of Maximum Temperature (°F) vs Minimum Temperature (°F)")
+pam1_fulljoin<-clust_dat_fulljoin%>%pam(k=3)
+pam1_fulljoin$silinfo$avg.width
+plot(pam1_fulljoin,which=2)
+pam_dat_fulljoin<-fulljoinproject%>%select(TMIN,TMAX)
+sil_width_fulljoin<-vector()
+pam2_fulljoin<-fulljoinproject%>%select(TAVG,TMAX,TMIN)%>%pam(3)
+pam2_fulljoin
+pam2_fulljoin$silinfo$avg.width
+plot(pam2_fulljoin, which = 2)
+final_fulljoin<-fulljoinproject%>%mutate(cluster=as.factor(pam2_fulljoin$clustering))
+confmat_fulljoin<-final_fulljoin%>%group_by(`Reason for Stop – TCOLE form`)%>%count(cluster)%>%arrange(desc(n))%>%pivot_wider(names_from="cluster",values_from="n",values_fill=list('n'=0))
+confmat_fulljoin
+round(sum(diag(as.matrix(confmat_fulljoin[, 2:4])))/sum(confmat_fulljoin[, 2:4]),4)
+ggplot(final_fulljoin,aes(x=TMIN,y=TMAX,color=cluster))+geom_point()+xlab("Minimum Temperature (°F)") + ylab("Maximum Temperature (°F)") + ggtitle("Scatter Plot of Maximum Temperature (°F) vs Minimum Temperature (°F)")
+library(plotly)
+final_fulljoin%>%plot_ly(x=~TMIN,y=~TMAX,z=~TAVG,color=~cluster,type="scatter3d",mode="markers",symbol=~`Reason for Stop – TCOLE form`,symbols=c('circle','x','o'))%>%layout(title="Scatter Plot of Average Temperature (°F) vs Maximum Temperature (°F) vs Minimum Temperature (°F)")
+```
+For this particular section of coding, I had chosen to work with three clusters from a two variable perspective as well as a three variable perspective. Based upon k-means, the three cluster sizes were founded to be at 18000, 13465, and 28173. From the two variable perspective, we can now observe whether or not the reason for a particular stop - matches to the minimum temperature and the maximum temperature. By observing the three clusters from a two variable perspective, we can observe that there is little to no correlation between the minimum temperature and the maximum temperature to the reason for a particular stop. Additionally, since the average silhouette width was founded to be at about 0.5010096 - the structure is considered to be weak, and perhaps artificial as well. The reason for this is because if the average silhouette width value is founded to be between the values of 0.26 - 0.50, the structure is interpreted as weak and could potentially be considered as artificial. However, from the three variable perspective, we can now observe whether or not the reason for a particular stop - matches to the minimum temperature, the maximum temperature, and the average temperature. By observing the three clusters from a three variable perspective, we can observe that there is little to no correlation between the minimum temperature, the maximum temperature, and the average temperature to the reason for a particular stop. Additionally, from the three variable perspective, since the average silhouette value was founded to be at about 0.506004 - the structure is also considered to be weak, and perhaps artificial as well. In addition to this, by using more variables, we were somewhat unsuccessful in being able to correctly classify more reasons for the stop since the accuracy was founded to be at approximately 0.3752.  
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,214 @@
+---
+title: "Project 2 (spu85) [SDS348]"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## 0. Introduction
+
+```{r}
+project2.0<-read.csv(file = '~/Projects (SDS348)/Salaries.csv')
+head(project2.0)
+```
+
+For my dataset, I had decided to look at that salaries of college professors and how it had differed upon their rank, discipline, years since they had gotten his/her PhD, years of service, and sex. For rank - it had looked at to see whether a person was considered to be a Professor, an Associate Professor, or an Assistant Professor. For discipline - it had looked at their behavior and rated the person on an A or B scale. For years since he/she had gotten their PhD - it had looked at how many years he/she have been teaching since receiving their PhD. For years of service - it had looked at the total amount of time a person had spent teaching at that school. And for sex - it had looked at whether the person was considered a male or a female. In total, there were 398 observations that were made.
+
+## 1.MANOVA Testing
+```{r}
+man1<-manova(cbind(yrs.since.phd,yrs.service,salary)~rank, data=project2.0)
+summary(man1)
+
+summary.aov(man1)
+
+pairwise.t.test(project2.0$yrs.since.phd, project2.0$rank, p.adj = "none")
+
+pairwise.t.test(project2.0$yrs.service, project2.0$rank, p.adj = "none")
+
+pairwise.t.test(project2.0$salary, project2.0$rank, p.adj = "none")
+
+library(tidyverse)
+ggplot(project2.0, aes(x = yrs.service, y = yrs.since.phd)) + ggtitle("Years since PhD vs Years of Service")+geom_point(alpha = .5) + geom_density_2d(h=2) + coord_fixed() + facet_wrap(~rank)
+
+library(rstatix)
+group<-project2.0$rank
+DVs<-project2.0%>%select(yrs.since.phd,yrs.service,,salary)
+sapply(split(DVs,group),mshapiro_test)
+
+lapply(split(DVs,group), cov)
+```
+
+By performing a MANOVA test on all of my numeric variables to determine if there were any mean differences across my rank variable - it was determined that there was at least one mean difference present across my rank variable. As a result, a univariate ANOVA test was used to determine what mean difference was present across my rank variable. In doing so, it was determined that - all 3 numeric variables were to be significant and showing a mean different across my rank variable, since each of there p-values were founded to be equal to less than 0.05 (p-value for 'yrs.since.phd'= < 2.2e-16 ; p-value for 'yrs.service' = < 2.2e-16 ; p-value for 'salary' = < 2.2e-16). And so, because all 3 numeric variables had shown a mean difference across the rank variable - a post-hoc t-test needs to be done on all 3 of them. As a result, by performing a post-hoc t-test on all 3 numeric variables against rank, it was determined that there were 3 significant differences that were found against rank. In that: 1) there is a significant difference between a professor's rank and the years since they had gotten their PhD; 2) there is a significant difference between a professor's rank and their years of service; and 3) there is a significant difference between a professor's rank and their salary. Additionally, since there was a total of 13 tests that had occurred (1 MANOVAs, 3 ANOVAs, and 9 t-tests),it can be determined that the probability that I had made a type-I error was founded to be at 0.48665791672. In addition to this, after adjusting for multiple comparisons - it was founded to be that the boneferroni adjusted significance level had needed to be at 0.00384615384 in order to keep the overall type-I error rate at 0.05. Furthermore, if I were to look at the MANOVA assumption of multivariate normality and the MANOVA assumption of homogeneity of covariances - I do not believe that all of the MANOVA assumptions would have been met for this particular project. It's because although the multivariate normality assumption was met, the homogeneity of covariances was not. 
+
+## 2.Randomization Test
+```{r}
+rand_dist<-vector()
+for(i in 1:5000){
+new<-data.frame(salary=sample(project2.0$salary),status=project2.0$rank)
+rand_dist[i]<-sd(new[new$status=="Prof",]$salary)-
+sd(new[new$status=="AssocProf",]$salary)
+}
+
+mean(rand_dist>32895.67 | rand_dist < -32895.67)
+
+{hist(rand_dist,main="Mean Difference vs Random Distribution",ylab="Mean Difference"); abline(v = c(32895.67,-32895.67),col="red")}
+```
+
+The randomization test that I am performing for my data will be the mean difference test. For this particular test the DVs that I am using are 'Professor' and 'Associate Professor'. The null hypothesis was founded the be that: For both DVs (Professor, Associate Professor), the salary is to be the equal to one another. In regards to the alternate hypothesis, it was founded to be that: For both DVs (Professor, Associate Professor), the salary is to be different from one another. And so, by performing the test and determining the p-value results from the permutation test, it was founded to be that the probability of observing a mean difference as extreme was founded to be equal to 0 - which means that the we reject the null hypothesis since the p-value was founded to be less than 0.5. As a result, it can be determined that - for both DVs (Professor, Associate Professor), the salary is to be different from each other.
+
+## 3.Linear Regression Model
+```{r}
+project2.0<-project2.0%>%mutate(totalsalary=salary*yrs.service)
+
+project2.0$yrs.since.phd_c<-project2.0$yrs.since.phd-mean(project2.0$yrs.since.phd)
+
+project2.0$yrs.service_c<-project2.0$yrs.service-mean(project2.0$yrs.service)
+
+project2.0$salary_c<-project2.0$salary-mean(project2.0$salary)
+
+fit1<-lm(totalsalary~yrs.service_c,data=project2.0)
+summary(fit1)
+
+fit1.0<-lm(totalsalary~yrs.since.phd_c,data=project2.0)
+summary(fit1.0)
+
+fit1.1<-lm(totalsalary~yrs.service_c*rank,data=project2.0)
+summary(fit1.1)
+
+fit1.2<-lm(totalsalary~yrs.since.phd_c*rank,data=project2.0)
+summary(fit1.2)
+
+gglinereg<-project2.0%>%ggplot(aes(yrs.service_c,totalsalary))+ggtitle("Total Salary vs Mean Center for Years of Service")+geom_point(aes(color=rank))+geom_smooth(method = 'lm',se=F,aes(color=rank))
+gglinereg
+
+#Linearity
+resids<-fit1.1$residuals
+fitvals<-fit1.1$fitted.values
+fitted<-fit1.1$fitted.values
+ggplot()+ggtitle("Residuals vs Fitted")+geom_point(aes(fitted,resids))
+
+#Normality
+ks.test(resids, "pnorm", mean=0, sd(resids)) 
+
+#Homoskedasticity
+library(sandwich); library(lmtest)
+bptest(fit1.1)
+
+summary(fit1.1)$coef
+coeftest(fit1.1,vcov=vcovHC(fit1.1))
+```
+By interpreting the coefficient estimates, it can be determined that - for every one increase in the year since the professor has served for the school, there is an increase in total salary by approximately 123,154 dollars on average. Additionally, it can also be determined that - for every one increase in the year since the professor has earned his/her PhD, there is an increase in total salary by approximately 113,770 dollars on average. However, if I were to also factor in the ranking of the professor, for every one increase in the year since the associate professor has served for the school - there is an increase in total salary for 'Professors' by approximately 38,279.30 dollars, while a decrease in total salary for 'Assistant Professors' by approximately 487.30 dollars. In addition to this, if I were to also factor in the ranking of the professor for years since the associate professor has earned his/her PhD - there is an increase in total salary for 'Professors' by approximately 37,099 dollars, while a decrease in total salary for 'Assistant Professor' by approximately 58,476 dollars. In addition to this, by looking at the linear regression model that I had created for this project, it shows that there is an increase in the total amount of salary for 'Professors' and 'Associate Professors' depending on how long they have served with the school on average. Additionally, if I were to check the assumptions of linearity, normality, and homoskedasticity - it can be seen in that neither linearity, normality, or homoskedasticity's assumptions were met. As a result, since the p-value was founded to be equal to less than 0.5 for both normality and homoskedasticity - we reject the null hypothesis. In addition to this, if I were to recompute the regression results with robust standard errors - a significant change has occurred within the t-value and p-value sections. For the t-value section - there was a significant increase in t-value for 'Professors' and 'yrs.service_c', while a significant decrease in t-value for 'Assistant Professor'. In regards to the p-value section - there was a significant increase in p-value for 'Assistant Professor' and 'yrs.service_c:rankAsstProf'.
+
+
+
+## 4.Linear Regression Model with Bootstrapped Standard Errors
+```{r}
+samp_distn<-replicate(5000, {
+  boot_dat <- sample_frac(project2.0, replace=T) 
+  fit <- lm(totalsalary~yrs.service_c*rank, data=boot_dat) 
+coef(fit) 
+})
+
+bootstrapproj2<-samp_distn %>% t %>% as.data.frame %>% summarize_all(sd)
+bootstrapproj2
+```
+By looking at the same regression model with bootstrapped standard errors present, it can be determined that - the values of these standard errors, are slightly lower in value in comparison to the original standard errors founded above. As a result of this, this also probably means that the p-values for this question - are more than likely to be lower in value in comparison to the one founded above since this question is accounting for standard errors, which will ultimately make our values smaller in comparison to the one that was founded in the previous question. 
+
+## 5.Logistic Regression Model
+```{r}
+fit2<-glm(discipline~totalsalary+yrs.service+yrs.since.phd,data=project2.0,family="binomial")
+coeftest(fit2)
+exp(coeftest(fit2))
+
+prob<-predict(fit2,type="response")
+pred<-ifelse(prob>.5,1,0)
+table(prediction=pred, truth=project2.0$discipline) %>% addmargins
+
+
+accuracy<-(83+167)/397
+sensitivity<-167/216
+specificty<-83/181
+precision<- 167/216
+
+project2.0$logit<-predict(fit2,type="link")
+
+project2.0%>%ggplot(aes(logit,color=discipline,fill=discipline))+geom_density(alpha=.4)+
+theme(legend.position=c(.75,.75))+geom_vline(xintercept=0)+xlab("predictor (logit)")+ggtitle("Density vs Predictor(logit)")
+
+library(plotROC)
+ROCplot<-ggplot(project2.0)+geom_roc(aes(d=discipline,m=prob),n.cuts=0)+geom_segment(aes(x=0,xend=1,y=0,yend=1),lty=2)+ggtitle("True Positive Fraction vs False Positive Fraction")
+ROCplot
+
+calc_auc(ROCplot)
+```
+For every 1 unit increase in total salary, odds of the discipline score being an A increases by 1.00000. In addition to this, for every 1 unit increase in years of service, odds of the discipline score being an A increases by 0.9475. And lastly, for every 1 unit increase in years since he/she has received their PhD, odds of the discipline score being an A increases by 0.93302. Additionally, I had also computed a confusion matrix for my logistic regression model, which aided in the computation of - the accuracy (0.6297229), sensitivity (TPR) [0.7731481], specificity (TNR) [0.6944444], precision (PPV) [0.7731481], and AUC (0.6944828). As a result, by looking at the value that was founded for AUC, it can be determined in that it is a poor predictor in trying to predict discipline ranking from just total salary, years of service, and years since receiving a PhD. 
+
+## 6.Logistic Regression from All Variables
+```{r}
+class_diag <- function(probs,truth){ 
+  if(is.character(truth)==TRUE) truth<-as.factor(truth) 
+  if(is.numeric(truth)==FALSE & is.logical(truth)==FALSE) truth<-as.numeric(truth)-1 
+  tab<-table(factor(probs>.5,levels=c("FALSE","TRUE")),factor(truth, levels=c(0,1))) 
+  acc=sum(diag(tab))/sum(tab) 
+  sens=tab[2,2]/colSums(tab)[2] 
+  spec=tab[1,1]/colSums(tab)[1] 
+  ppv=tab[2,2]/rowSums(tab)[2] 
+  
+  ord<-order(probs, decreasing=TRUE) 
+  probs <- probs[ord]; truth <- truth[ord] 
+  TPR=cumsum(truth)/max(1,sum(truth))  
+  FPR=cumsum(!truth)/max(1,sum(!truth)) 
+  dup <-c(probs[-1]>=probs[-length(probs)], FALSE) 
+  TPR <-c(0,TPR[!dup],1); FPR<-c(0,FPR[!dup],1) 
+  n <- length(TPR) 
+  auc <- sum( ((TPR[-1]+TPR[-n])/2) * (FPR[-1]-FPR[-n])) 
+  data.frame(acc,sens,spec,ppv,auc) 
+}
+
+fit3<-glm(discipline~totalsalary+yrs.since.phd+yrs.service+salary+yrs.since.phd_c+yrs.service_c+logit+salary_c,data=project2.0,family="binomial")
+coeftest(fit3)
+
+probs<-predict(fit3,type="response")
+class_diag(probs,project2.0$discipline)
+
+set.seed(1234)
+k=10
+data <- project2.0 %>% sample_frac 
+folds <- ntile(1:nrow(data),n=10)
+diags<-NULL
+for(i in 1:k){
+train <- data[folds!=i,] 
+test <- data[folds==i,]
+truth <- test$discipline 
+fit <- glm(discipline~totalsalary+yrs.since.phd+yrs.service+salary+yrs.since.phd_c+yrs.service_c+logit+salary_c, data=train, family="binomial")
+probs <- predict(fit, newdata=test, type="response")
+diags<-rbind(diags,class_diag(probs,truth))}
+summarize_all(diags,mean)
+
+library(glmnet)
+y<-as.matrix(project2.0$discipline)
+x<-model.matrix(discipline~totalsalary+yrs.since.phd+yrs.service+salary+yrs.since.phd_c+yrs.service_c+logit+salary_c,data=project2.0)[,-1]
+x<-scale(x)
+cv<-cv.glmnet(x,y,family="binomial")
+lasso<-glmnet(x,y,family="binomial",lambda=cv$lambda.1se)
+coef(lasso)
+
+set.seed(1234)
+k=10
+data <- project2.0 %>% sample_frac 
+folds <- ntile(1:nrow(data),n=10) 
+diags<-NULL
+for(i in 1:k){
+train <- data[folds!=i,]
+test <- data[folds==i,] 
+truth <- test$discipline
+fit <- glm(discipline~totalsalary+yrs.since.phd+yrs.service+salary+yrs.since.phd_c+yrs.service_c+logit+salary_c,
+data=train, family="binomial")
+probs <- predict(fit, newdata=test, type="response")
+diags<-rbind(diags,class_diag(probs,truth))
+}
+diags%>%summarize_all(mean)
+```
+Based upon the in-sample classification diagnostics, I was able to determine the - accuracy value (0.6523929), sensitivity value (0.7546296), specificity value (0.5303867), precision value (0.6572581), and AUC value (0.7302793). As a result, by looking at the value that was founded for AUC, it can be determined in that it is a fair predictor in trying to predict discipline ranking from just total salary, years of service, years since receiving a PhD, salary, 'yrs.service_c', 'yrs.since.phd_c', 'salary_c', and 'logit'. By performing a 10-fold CV with the same model, I was also able to determine the accuracy value (0.6525641), sensitivity value (0.7505249), specificity value (0.5329252), precision value (0.6620663), and AUC value (0.7073119). As a result, by looking at the value that was founded for AUC, it can also be determined in that it is a fair predictor in trying to predict discipline ranking from just total salary, years of service, years since receiving a PhD, salary, 'yrs.service_c', 'yrs.since.phd_c', 'salary_c', and 'logit'. Additionally, by looking at the 10-fold CV model and comparing it to the in-sample model, it can be observed in that they are relatively similar to one another in value for Accuracy, Sensitivity, Specificity, Precision, and AUC. Moving on, if I were to perform a LASSO test on the same model, it can be discovered in that the values that were retained are - discipline, yrs.since.phd, salary, yrs.since.phd_c, and logit. As a result, the values that were not retained due to the LASSO test were - totalsalary, yrs.service, yrs.service_c, and salary_c. However, in addition to the LASSO model, if I were to perform a 10-fold CV test for it - I was able to determine the accuracy value (0.6525641), sensitivity value (0.750249), specificity value (0.5329252), precision value (0.6620663), and AUC value (0.7073119). As a result, by looking at the value that was founded for AUC, it can also be determined in that it is a fair predictor in trying to predict discipline ranking from just total salary, years of service, years since receiving a PhD, salary, 'yrs.service_c', 'yrs.since.phd_c', 'salary_c', and 'logit'. In addition to this, by comparing the results from the LASSO test to the in-sample test and the 10-fold CV test, it can be determined in that the values are relatively similar to one another. 

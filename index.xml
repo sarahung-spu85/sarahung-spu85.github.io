@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>My Site</title>
+    <link>/</link>
+    <description>Recent content on My Site</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-US</language>
+    <lastBuildDate>Fri, 07 May 2021 00:00:00 +0000</lastBuildDate><atom:link href="/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>My Post</title>
+      <link>/post/2021/05/07/my-post/</link>
+      <pubDate>Fri, 07 May 2021 00:00:00 +0000</pubDate>
+      
+      <guid>/post/2021/05/07/my-post/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>Project 1 (spu85) [SDS348]</title>
+      <link>/project/project1/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>/project/project1/</guid>
+      <description>Introduction The two datasets that I have chosen to work with are called “Austin Citations” and “Austin Weather”. For “Austin Citations”, the variables that were being used were - citation number, offense date, offense time, location, race known, reason for stop - TCOLE form, sex,, race, search y/n, search based on, and search found. For this particular dataset, I was able to access this information from the Data.</description>
+    </item>
+    
+    <item>
+      <title>Project 2 (spu85) [SDS348]</title>
+      <link>/project/project2/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>/project/project2/</guid>
+      <description>0. Introduction project2.0&amp;lt;-read.csv(file = &amp;#39;~/Projects (SDS348)/Salaries.csv&amp;#39;) head(project2.0) ## X rank discipline yrs.since.phd yrs.service sex salary ## 1 1 Prof B 19 18 Male 139750 ## 2 2 Prof B 20 16 Male 173200 ## 3 3 AsstProf B 4 3 Male 79750 ## 4 4 Prof B 45 39 Male 115000 ## 5 5 Prof B 40 41 Male 141500 ## 6 6 AssocProf B 6 6 Male 97000 For my dataset, I had decided to look at that salaries of college professors and how it had differed upon their rank, discipline, years since they had gotten his/her PhD, years of service, and sex.</description>
+    </item>
+    
+    <item>
+      <title>Projects</title>
+      <link>/projects/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>/projects/</guid>
+      <description> Check out some of my coding projects below:
+ Wrangling &amp;amp; Exploratory Data Analysis
+ Modeling, Inference, Prediction
+  -- </description>
+    </item>
+    
+    <item>
+      <title>Resume</title>
+      <link>/resume/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>/resume/</guid>
+      <description>    </description>
+    </item>
+    
+  </channel>
+</rss>
